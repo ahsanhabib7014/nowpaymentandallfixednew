@@ -3760,8 +3760,8 @@ const getMethodConfig = (method) => {
       amountPlaceholder: 'যেমন: 10',
       senderLabel: 'TRX Wallet Address',
       senderPlaceholder: 'TXYZ... (৩৪ character)',
-      senderMinLength: 20,
-      senderMaxLength: 50,
+      senderMinLength: 34,
+      senderMaxLength: 34,
       senderOnlyDigits: false,
       adminLabel: 'অ্যাডমিন TRX Address:'
     };
@@ -3776,7 +3776,7 @@ const getMethodConfig = (method) => {
       senderLabel: 'Binance Pay ID',
       senderPlaceholder: '541254656',
       senderMinLength: 5,
-      senderMaxLength: 20,
+      senderMaxLength: 10,
       senderOnlyDigits: true,
       adminLabel: 'অ্যাডমিন Binance Pay ID:'
     };

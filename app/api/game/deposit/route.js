@@ -28,10 +28,10 @@ const getSenderValidation = (method) => {
   const upper = String(method || '').toUpperCase();
   
   if (upper.includes('TRX') || upper.includes('TRON')) {
-    return { minLength: 20, maxLength: 50, onlyDigits: false, label: 'TRX Wallet Address' };
+    return { minLength: 34, maxLength: 34, onlyDigits: false, label: 'TRX Wallet Address' };
   }
   if (upper.includes('USDT') || upper.includes('BINANCE')) {
-    return { minLength: 5, maxLength: 50, onlyDigits: false, label: 'Binance/USDT ID' };
+    return { minLength: 5, maxLength: 10, onlyDigits: false, label: 'Binance/USDT ID' };
   }
   if (upper.includes('BTC') || upper.includes('BITCOIN')) {
     return { minLength: 26, maxLength: 50, onlyDigits: false, label: 'Bitcoin Address' };
