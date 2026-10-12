@@ -8,30 +8,36 @@ const CURRENCIES = ['usdttrc20', 'trx', 'bnbbsc', 'sol'];
 
 export async function GET() {
   try {
-    // ✅ সব currency-র minimum parallel fetch
     const results = await Promise.all(
       CURRENCIES.map(async (currency) => {
         try {
-          const res = await fetch(
-            `${NOWPAYMENTS_API_URL}/min-amount?currency_from=usd&currency_to=${currency}&fiat_equivalent=usd`,
-            {
-              headers: {
-                'x-api-key': NOWPAYMENTS_API_KEY,
-              },
-              // ✅ 5 মিনিট cache
-              next: { revalidate: 300 },
-            }
-          );
+          const url = `${NOWPAYMENTS_API_URL}/min-amount?currency_from=usd&currency_to=${currency}&fiat_equivalent=usd`;
+          console.log(`\n========== [${currency}] ==========`);
+          console.log(`Fetching: ${url}`);
+
+          const res = await fetch(url, {
+            headers: {
+              'x-api-key': NOWPAYMENTS_API_KEY,
+            },
+            cache: 'no-store',
+          });
+
+          console.log(`Status: ${res.status}`);
 
           if (!res.ok) {
-            console.warn(`Min amount fetch failed for ${currency}:`, res.status);
+            const errorText = await res.text();
+            console.warn(`Min amount fetch FAILED for ${currency}:`);
+            console.warn(`Response: ${errorText}`);
             return { currency, min: null };
           }
 
           const data = await res.json();
           
-          // ✅ fiat_equivalent = USD-তে minimum
+          // ✅ Full response log
+          console.log(`Full Response:`, JSON.stringify(data, null, 2));
+          
           const minUsd = Math.ceil(Number(data.fiat_equivalent) || 0);
+          console.log(`→ min USD: $${minUsd}`);
           
           return { currency, min: minUsd };
         } catch (err) {
@@ -41,11 +47,14 @@ export async function GET() {
       })
     );
 
-    // ✅ Object আকারে রিটার্ন — page.js সহজে ব্যবহার করতে পারবে
     const minimums = {};
     results.forEach(({ currency, min }) => {
       minimums[currency] = min;
     });
+
+    console.log('\n========== FINAL MINIMUMS ==========');
+    console.log(JSON.stringify(minimums, null, 2));
+    console.log('=====================================\n');
 
     return NextResponse.json({
       success: true,
