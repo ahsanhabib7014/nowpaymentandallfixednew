@@ -2311,7 +2311,6 @@
 
 // ////////////////////////////////////////////////////////////////
 
-
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -2450,15 +2449,11 @@ export default function UserDepositPage() {
       })
       .catch(err => console.error('Rate fetch error:', err));
 
-    // ✅ Crypto prices from CoinGecko
-    fetch('https://api.coingecko.com/api/v3/simple/price?ids=tron,solana,binancecoin&vs_currencies=usd')
+    // ✅ Crypto prices from our own API route
+    fetch('/api/crypto-prices')
       .then(res => res.json())
       .then(data => {
-        setCryptoPrices({
-          TRX: data.tron?.usd || 0.15,
-          SOL: data.solana?.usd || 150,
-          BNB: data.binancecoin?.usd || 600
-        });
+        if (data.success) setCryptoPrices(data.prices);
       })
       .catch(err => console.error('Crypto price error:', err));
   }, []);
@@ -2531,7 +2526,7 @@ export default function UserDepositPage() {
   // ✅ Helper: USD → Crypto calculation
   const calculateCrypto = (usdAmount, currency) => {
     const amount = Number(usdAmount);
-    if (!amount || amount <= 0) return '0';
+    if (!amount || amount <= 0 || isNaN(amount)) return '0';
     
     if (currency === 'usdttrc20') return amount.toFixed(2);
     if (currency === 'trx') return (amount / cryptoPrices.TRX).toFixed(4);
@@ -2547,6 +2542,15 @@ export default function UserDepositPage() {
     if (currency === 'sol') return 'SOL';
     if (currency === 'bnbbsc') return 'BNB';
     return '';
+  };
+
+  // ✅ Helper: Crypto price per coin
+  const getCryptoPrice = (currency) => {
+    if (currency === 'usdttrc20') return 1;
+    if (currency === 'trx') return cryptoPrices.TRX;
+    if (currency === 'sol') return cryptoPrices.SOL;
+    if (currency === 'bnbbsc') return cryptoPrices.BNB;
+    return 0;
   };
 
   const handleSubmitDeposit = async (e) => {
@@ -2834,6 +2838,7 @@ export default function UserDepositPage() {
         {showNowPayments && (
           <div className="bg-gradient-to-br from-blue-900/30 to-slate-900 p-4 md:p-6 rounded-2xl border border-blue-500/30 shadow-lg space-y-5">
             
+            {/* Header */}
             <div className="flex items-start gap-3 pb-4 border-b border-slate-800">
               <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 flex-shrink-0">
                 <i className="fa-solid fa-bolt text-xl"></i>
@@ -2846,7 +2851,7 @@ export default function UserDepositPage() {
               </div>
             </div>
 
-            {/* ✅ Currency Select — FIRST (upore) */}
+            {/* Currency Select */}
             <div>
               <label className="text-xs md:text-sm text-slate-400 font-semibold block mb-2">
                 পেমেন্ট কারেন্সি
@@ -2863,32 +2868,11 @@ export default function UserDepositPage() {
               </select>
             </div>
 
-            {/* ✅ Amount input with CoinMarketCap-style conversion on TOP */}
+            {/* Amount input */}
             <div>
               <label className="text-xs md:text-sm text-slate-400 font-semibold block mb-2">
                 পরিমাণ (USD $) — যত ডলার ডিপোজিট করবেন
               </label>
-
-              {/* ✅ Conversion box — UPORE, big & bold */}
-              {npAmount && Number(npAmount) >= 5 && (
-                <div className="mb-3 bg-gradient-to-r from-blue-950/60 to-slate-900 border border-blue-500/40 rounded-xl p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                      <span className="text-2xl md:text-3xl font-black text-blue-400 font-mono">
-                        {calculateCrypto(npAmount, npCurrency)}
-                      </span>
-                      <span className="text-sm md:text-base font-bold text-slate-300">
-                        {getCryptoName(npCurrency)}
-                      </span>
-                    </div>
-                    <i className="fa-solid fa-arrow-right-arrow-left text-blue-500 text-lg flex-shrink-0"></i>
-                  </div>
-                  <p className="text-[10px] text-slate-500 mt-1.5">
-                    ≈ ৳{(Number(npAmount) * usdToBdtRate).toFixed(0)} — এটাই পাঠাতে হবে
-                  </p>
-                </div>
-              )}
-
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400 font-bold text-lg">$</span>
                 <input 
@@ -2907,6 +2891,101 @@ export default function UserDepositPage() {
               <p className="text-[10px] text-slate-500 mt-1">সর্বনিম্ন $5</p>
             </div>
 
+            {/* ✅ সম্পূর্ণ Details Box */}
+            {npAmount && Number(npAmount) >= 5 && (
+              <div className="bg-gradient-to-br from-blue-950/60 to-slate-900 border border-blue-500/40 rounded-xl overflow-hidden">
+                
+                {/* Top: Crypto amount (big) */}
+                <div className="p-4 border-b border-blue-500/20">
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-1">
+                    আপনি পাঠাবেন
+                  </p>
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-3xl md:text-4xl font-black text-blue-400 font-mono">
+                      {calculateCrypto(npAmount, npCurrency)}
+                    </span>
+                    <span className="text-base md:text-lg font-bold text-slate-200">
+                      {getCryptoName(npCurrency)}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    ≈ ৳{(Number(npAmount) * usdToBdtRate).toFixed(2)} BDT
+                  </p>
+                </div>
+
+                {/* Middle: Live rate */}
+                <div className="p-4 border-b border-blue-500/20 bg-blue-950/20">
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-2">
+                    লাইভ রেট
+                  </p>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-300">
+                      1 {getCryptoName(npCurrency)} =
+                    </span>
+                    <span className="font-mono font-bold text-emerald-400">
+                      ${getCryptoPrice(npCurrency).toFixed(4)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs mt-1.5">
+                    <span className="text-slate-300">
+                      $1 =
+                    </span>
+                    <span className="font-mono font-bold text-emerald-400">
+                      ৳{usdToBdtRate}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Bottom: Full breakdown */}
+                <div className="p-4 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">ডিপোজিট অ্যামাউন্ট</span>
+                    <span className="font-mono text-slate-200">${Number(npAmount).toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">NowPayments ফি (~0.5%)</span>
+                    <span className="font-mono text-slate-200">
+                      ${(Number(npAmount) * 0.005).toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">নেটওয়ার্ক ফি</span>
+                    <span className="font-mono text-slate-200">
+                      {npCurrency === 'usdttrc20' ? '~$0.50' : 
+                       npCurrency === 'trx' ? '~$0.10' : 
+                       npCurrency === 'bnbbsc' ? '~$0.20' : 
+                       '~$0.02'}
+                    </span>
+                  </div>
+
+                  <div className="border-t border-blue-500/20 pt-2 mt-2 flex items-center justify-between text-xs">
+                    <span className="text-slate-300 font-semibold">মোট পাঠাতে হবে</span>
+                    <span className="font-mono font-bold text-blue-400">
+                      ${Number(npAmount).toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-300 font-semibold">আপনি পাবেন</span>
+                    <span className="font-mono font-bold text-emerald-400">
+                      ৳{(Number(npAmount) * usdToBdtRate).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Info strip */}
+                <div className="px-4 py-2.5 bg-blue-500/10 border-t border-blue-500/20 flex items-center gap-2">
+                  <i className="fa-solid fa-circle-check text-emerald-400 text-xs"></i>
+                  <p className="text-[10px] text-slate-400">
+                    Payment confirm হলে ২-৫ মিনিটে অটো ব্যালান্স যোগ হবে
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Info box */}
             <div className="bg-blue-950/40 border border-blue-500/20 p-3 rounded-xl">
               <p className="text-[10px] md:text-xs text-blue-300 leading-relaxed flex items-start gap-2">
                 <i className="fa-solid fa-circle-info mt-0.5 flex-shrink-0"></i>
@@ -2916,6 +2995,7 @@ export default function UserDepositPage() {
               </p>
             </div>
 
+            {/* Submit button */}
             <button 
               type="button"
               onClick={handleNowPayments}
