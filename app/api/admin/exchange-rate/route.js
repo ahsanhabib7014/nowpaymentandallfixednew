@@ -1,3 +1,6 @@
+
+
+// ///////////////////////////////////////////////////////////////
 import { NextResponse } from 'next/server';
 import dbConnect from '@/utils/db';
 import Setting from '@/models/Setting';
@@ -5,14 +8,15 @@ import { verifyAuth } from '@/utils/authCheck';
 
 const DEFAULT_RATE = 120;
 
-// GET: Current rate
+// GET: Current rate (লগইন করা ইউজার এবং অ্যাডমিন উভয়ই রিড করতে পারবে)
 export async function GET(req) {
   try {
     await dbConnect();
 
-    const auth = await verifyAuth('admin');
+    // এখানে verifyAuth() ব্যবহার করা হয়েছে যাতে যেকোনো লগইন করা ইউজার (ইউজার বা অ্যাডমিন) রেটটি দেখতে পারে
+    const auth = await verifyAuth(); 
     if (!auth.success) {
-      return NextResponse.json({ success: false, message: auth.message }, { status: auth.status });
+      return NextResponse.json({ success: false, message: auth.message || 'অনুমতি নেই!' }, { status: auth.status || 401 });
     }
 
     const setting = await Setting.findOne({ key: 'usdToBdtRate' });
@@ -35,7 +39,7 @@ export async function GET(req) {
   }
 }
 
-// POST: Update rate
+// POST: Update rate (এটি আগের মতোই শুধু অ্যাডমিনের জন্য সুরক্ষিত থাকবে)
 export async function POST(req) {
   try {
     await dbConnect();
@@ -90,3 +94,7 @@ export async function POST(req) {
     }, { status: 500 });
   }
 }
+
+/////////////////////////////////////////////////////
+
+
