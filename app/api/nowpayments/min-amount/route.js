@@ -11,9 +11,10 @@ export async function GET() {
     const results = await Promise.all(
       CURRENCIES.map(async (currency) => {
         try {
-          const url = `${NOWPAYMENTS_API_URL}/min-amount?currency_from=usd&currency_to=${currency}&fiat_equivalent=usd`;
-          console.log(`\n========== [${currency}] ==========`);
-          console.log(`Fetching: ${url}`);
+          // ✅ সঠিক parameter order: currency_from = crypto, currency_to = usd
+          const url = `${NOWPAYMENTS_API_URL}/min-amount?currency_from=${currency}&currency_to=usd&fiat_equivalent=usd`;
+          
+          console.log(`[${currency}] Fetching: ${url}`);
 
           const res = await fetch(url, {
             headers: {
@@ -22,22 +23,16 @@ export async function GET() {
             cache: 'no-store',
           });
 
-          console.log(`Status: ${res.status}`);
-
           if (!res.ok) {
-            const errorText = await res.text();
-            console.warn(`Min amount fetch FAILED for ${currency}:`);
-            console.warn(`Response: ${errorText}`);
+            console.warn(`Min amount fetch failed for ${currency}:`, res.status);
             return { currency, min: null };
           }
 
           const data = await res.json();
+          console.log(`[${currency}] Response:`, JSON.stringify(data));
           
-          // ✅ Full response log
-          console.log(`Full Response:`, JSON.stringify(data, null, 2));
-          
+          // ✅ min_amount হলো crypto-তে minimum, fiat_equivalent হলো USD-তে minimum
           const minUsd = Math.ceil(Number(data.fiat_equivalent) || 0);
-          console.log(`→ min USD: $${minUsd}`);
           
           return { currency, min: minUsd };
         } catch (err) {
@@ -52,9 +47,7 @@ export async function GET() {
       minimums[currency] = min;
     });
 
-    console.log('\n========== FINAL MINIMUMS ==========');
-    console.log(JSON.stringify(minimums, null, 2));
-    console.log('=====================================\n');
+    console.log('✅ Final minimums:', minimums);
 
     return NextResponse.json({
       success: true,
